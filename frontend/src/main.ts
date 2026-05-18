@@ -602,8 +602,9 @@ function updateLeverageSlider(c: number, l: number = 1) {
   const slider = $("leverage-slider") as HTMLInputElement;
   const numIn  = $("leverage-input")  as HTMLInputElement;
   const maxLev = Math.floor(maxLeverageFor(c, l, minHF()) * 10) / 10; // floor to 1 decimal
-  // If lFactor is 0 the pool marks the asset collateral-only; maxLev collapses to 1.0
-  // and the slider would have min == max, appearing stuck. Disable it and surface a notice.
+  // Looping requires the same asset to be both collateral (c > 0) and borrowable (l > 0).
+  // If either is 0 the pool blocks one side and maxLev collapses to 1.0 — disable the slider
+  // and surface an accurate notice instead of leaving min == max (appearing stuck).
   const leverageable = maxLev > 1.0;
   slider.min = numIn.min = "1.0";
   slider.max = numIn.max = String(leverageable ? maxLev : 1.0);
@@ -619,7 +620,12 @@ function updateLeverageSlider(c: number, l: number = 1) {
   const notice = document.getElementById("non-borrowable-notice");
   if (notice) {
     notice.classList.toggle("hidden", leverageable);
-    notice.textContent = `⚠ ${selectedAsset.symbol} is collateral-only on this pool — looping requires a borrowable asset.`;
+    const sym = selectedAsset.symbol;
+    notice.textContent = c <= 0
+      ? `⚠ ${sym} is borrow-only on this pool — cannot be used as collateral, so looping is not available.`
+      : l <= 0
+        ? `⚠ ${sym} is collateral-only on this pool — cannot be borrowed, so looping is not available.`
+        : `⚠ ${sym} cannot be looped on this pool.`;
   }
 }
 
